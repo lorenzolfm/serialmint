@@ -3,7 +3,7 @@ all-features = true
 
 [bans]
 wildcards = "deny"
-# The mint implements the protocol itself. These are the library crates of CDK. A new crate of CDK
+# The mint implements the protocol itself. These are the crates of CDK. A new crate of CDK
 # needs a line here.
 deny = [
     { crate = "cashu", reason = "no CDK in this project" },
