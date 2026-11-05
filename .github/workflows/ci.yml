@@ -1,0 +1,112 @@
+# Lint and test on every PR, and on main once a PR lands, and check what Cargo.lock locks against
+# RustSec's advisories, anew each time.
+#
+# CI builds through the flake and not through a toolchain action, so that the build is written down
+# once: the rust it builds with and how cargo is run are the flake's, as they are in the devshell.
+#
+# Actions are pinned by commit SHA, not by tag. A tag is a ref that the repo of the action can move at
+# any time. The comment after each SHA is a label for a person; the SHA is the pin.
+
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # A new push to a pull request cancels the older run. A push to main does not, so each commit on
+  # main gets a result.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # keep-outputs, for the cache below.
+      - uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            keep-outputs = true
+
+      # The nix store, as the last run on main left it, so that a run builds only what main has not
+      # built. Only main saves, and a PR restores what main saved: the Actions cache holds 10 GB for
+      # the repo, and a PR's store would serve that PR alone while it pushed main's out. The key
+      # decides when main saves, never what nix builds, so a file it misses costs a rebuild, not a
+      # wrong build. Before main saves, the store is collected down to what this job built.
+      - uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7
+        with:
+          primary-key: nix-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.nix', 'nix/**', 'flake.lock', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', '.cargo/config.toml', 'src/**', 'clippy.toml', 'rustfmt.toml', '.config/nextest.toml') }}
+          restore-prefixes-first-match: nix-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-
+          save: ${{ github.ref == 'refs/heads/main' }}
+          gc-max-store-size: 0
+
+      # `packages` is a lazy attrset and `nix flake check` only evaluates it, so a `dev` that does not
+      # build would pass. Building it runs shellcheck over the recipes.
+      - name: Build the dev CLI
+        run: nix build --no-link .#dev
+
+      - name: Formatting
+        run: nix build -L --keep-going --out-link fmt .#checks.x86_64-linux.fmtRust .#checks.x86_64-linux.fmtNix
+
+      # `--out-link`, so that the store keeps the dependencies for the cache to save.
+      - name: Clippy
+        run: nix build -L --out-link clippy .#checks.x86_64-linux.clippy
+
+      # A step and not a flake check: a derivation has no network, so it would check against the
+      # advisories of when it built, as old as the cache's hit of it.
+      - name: Deny
+        run: nix run .#dev -- deny
+
+  # The package, whose derivation runs the tests in its sandbox.
+  serialmint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+            keep-outputs = true
+
+      # The nix store, as in `clippy`.
+      - uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569 # v7
+        with:
+          primary-key: nix-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('flake.nix', 'nix/**', 'flake.lock', 'Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', '.cargo/config.toml', 'src/**', 'clippy.toml', 'rustfmt.toml', '.config/nextest.toml') }}
+          restore-prefixes-first-match: nix-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-
+          save: ${{ github.ref == 'refs/heads/main' }}
+          gc-max-store-size: 0
+
+      - name: Build and test
+        run: nix build -L .#serialmint
+
+  # Each mutant on the lines that a pull request changes. A missed mutant fails the job. A push has no
+  # such diff, and only main saves a store, so this job has no cache.
+  mutants:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # A pull request checks out its merge commit. Depth 2 also gets the parents of that commit,
+          # so the diff is what the merge adds to `main`.
+          fetch-depth: 2
+
+      - uses: cachix/install-nix-action@448cde739abec1eaf0646249e3d25bb8d9bc7702 # v31.11.2
+
+      - run: |
+          git diff HEAD^1 HEAD > "$RUNNER_TEMP/pull-request.diff"
+          nix run .#dev -- mutants --in-diff "$RUNNER_TEMP/pull-request.diff" --jobs 2

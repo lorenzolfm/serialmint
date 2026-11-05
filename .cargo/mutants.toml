@@ -1,6 +1,6 @@
-# The same runner as the `serialmint-test` gate.
+# The same runner as `dev test`.
 test_tool = "nextest"
 
-# Above the limit on one test in `.config/nextest.toml`, with room for a test that starts just before
-# another test fails. So nextest ends each run first.
-minimum_test_timeout = 80
+# Above nextest's limit on one test in `.config/nextest.toml`, so nextest ends a hung mutant first,
+# and it reads as caught.
+minimum_test_timeout = 200

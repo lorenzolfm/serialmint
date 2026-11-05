@@ -1,5 +1,10 @@
+# What cargo-deny gates on, as `dev deny` runs it and CI does. `licenses` has yet to be triaged.
+
 [graph]
 all-features = true
+
+[advisories]
+yanked = "deny"
 
 [bans]
 wildcards = "deny"

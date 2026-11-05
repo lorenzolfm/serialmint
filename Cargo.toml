@@ -6,9 +6,21 @@ description = "A Cashu mint on Postgres SERIALIZABLE"
 repository = "https://github.com/lorenzolfm/serialmint"
 publish = false
 
+# An overflow panics in production too. A wrapped amount is money from nothing, and the flake's
+# tests run in this profile.
+[profile.release]
+overflow-checks = true
+
 [lints.rust]
 unsafe_code = "forbid"
+# A nightly builds serialmint, for the newest of what is stable. `#![feature]` would tie the code to
+# one, where without it a stable rust can build it again.
+unstable_features = "deny"
 
+# `all` and `pedantic` at the bottom, then the `restriction` lints that are worth warning on top of
+# them, then the pedantic lints that cost more than they catch. A later priority wins.
+#
+# `dev clippy` denies warnings, so every `warn` here is an error on a branch.
 [lints.clippy]
 all = { level = "warn", priority = 0 }
 pedantic = { level = "warn", priority = 1 }
@@ -25,3 +37,11 @@ todo = { level = "warn", priority = 2 }
 try_err = { level = "warn", priority = 2 }
 unimplemented = { level = "warn", priority = 2 }
 unwrap_used = { level = "warn", priority = 2 }
+
+inconsistent_digit_grouping = { level = "allow", priority = 3 }
+missing_errors_doc = { level = "allow", priority = 3 }
+missing_panics_doc = { level = "allow", priority = 3 }
+result_large_err = { level = "allow", priority = 3 }
+too_many_arguments = { level = "allow", priority = 3 }
+too_many_lines = { level = "allow", priority = 3 }
+unreadable_literal = { level = "allow", priority = 3 }

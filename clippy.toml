@@ -1,3 +1,8 @@
-allow-expect-in-tests = true
-allow-panic-in-tests = true
+# A test that unwraps is a test that fails with a panic, which is what a failing test does anyway.
+# `unwrap_used` stays on for everything else.
 allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+
+# A test helper that reaches an impossible arm has nothing better to do than panic, and the panic
+# is the failure report.
+allow-panic-in-tests = true
