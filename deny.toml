@@ -1,0 +1,39 @@
+[graph]
+all-features = true
+
+[bans]
+wildcards = "deny"
+# The mint implements the protocol itself. These are the library crates of CDK. A new crate of CDK
+# needs a line here.
+deny = [
+    { crate = "cashu", reason = "no CDK in this project" },
+    { crate = "cdk", reason = "no CDK in this project" },
+    { crate = "cdk-axum", reason = "no CDK in this project" },
+    { crate = "cdk-bdk", reason = "no CDK in this project" },
+    { crate = "cdk-cli", reason = "no CDK in this project" },
+    { crate = "cdk-cln", reason = "no CDK in this project" },
+    { crate = "cdk-common", reason = "no CDK in this project" },
+    { crate = "cdk-fake-wallet", reason = "no CDK in this project" },
+    { crate = "cdk-ffi", reason = "no CDK in this project" },
+    { crate = "cdk-http-client", reason = "no CDK in this project" },
+    { crate = "cdk-integration-tests", reason = "no CDK in this project" },
+    { crate = "cdk-ldk-node", reason = "no CDK in this project" },
+    { crate = "cdk-lnd", reason = "no CDK in this project" },
+    { crate = "cdk-mint-rpc", reason = "no CDK in this project" },
+    { crate = "cdk-mintd", reason = "no CDK in this project" },
+    { crate = "cdk-nostr", reason = "no CDK in this project" },
+    { crate = "cdk-payment-processor", reason = "no CDK in this project" },
+    { crate = "cdk-postgres", reason = "no CDK in this project" },
+    { crate = "cdk-prometheus", reason = "no CDK in this project" },
+    { crate = "cdk-redb", reason = "no CDK in this project" },
+    { crate = "cdk-signatory", reason = "no CDK in this project" },
+    { crate = "cdk-sql-common", reason = "no CDK in this project" },
+    { crate = "cdk-sqlite", reason = "no CDK in this project" },
+    { crate = "cdk-supabase", reason = "no CDK in this project" },
+]
+
+[sources]
+unknown-registry = "deny"
+# A git dependency needs a line in `allow-git`, so each one gets a review.
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

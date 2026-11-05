@@ -1,0 +1,27 @@
+[package]
+name = "serialmint"
+version = "0.1.0"
+edition = "2024"
+description = "A Cashu mint on Postgres SERIALIZABLE"
+repository = "https://github.com/lorenzolfm/serialmint"
+publish = false
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "warn", priority = 0 }
+pedantic = { level = "warn", priority = 1 }
+
+allow_attributes = { level = "warn", priority = 2 }
+allow_attributes_without_reason = { level = "warn", priority = 2 }
+as_conversions = { level = "warn", priority = 2 }
+implicit_clone = { level = "warn", priority = 2 }
+panic = { level = "warn", priority = 2 }
+redundant_test_prefix = { level = "warn", priority = 2 }
+redundant_type_annotations = { level = "warn", priority = 2 }
+str_to_string = { level = "warn", priority = 2 }
+todo = { level = "warn", priority = 2 }
+try_err = { level = "warn", priority = 2 }
+unimplemented = { level = "warn", priority = 2 }
+unwrap_used = { level = "warn", priority = 2 }

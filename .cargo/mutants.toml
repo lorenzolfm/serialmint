@@ -1,0 +1,6 @@
+# The same runner as the `serialmint-test` gate.
+test_tool = "nextest"
+
+# Above the limit on one test in `.config/nextest.toml`, with room for a test that starts just before
+# another test fails. So nextest ends each run first.
+minimum_test_timeout = 80
