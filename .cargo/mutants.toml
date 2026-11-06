@@ -1,0 +1,21 @@
+# The same runner as `dev test`.
+test_tool = "nextest"
+
+# As in every other `dev` command, so that a Cargo.lock out of step with Cargo.toml fails, and does
+# not get resolved again in the copy that cargo-mutants tests.
+additional_cargo_args = ["--locked"]
+
+# So that the first test to fail ends the run. A mutant can hang many tests, and with
+# `fail-fast = false` nextest would go on to the rest once they outnumber its threads, which outlasts
+# the timeout below.
+#
+# Only nextest takes this, once, and not with `--no-fail-fast`. So `--test-tool=cargo`,
+# `-- --no-fail-fast` and `-- --max-fail=2` each exit 4 and blame the baseline, when the tests are
+# fine. The real error is in `mutants.out/log/baseline.log`.
+additional_cargo_test_args = ["--max-fail=1:immediate"]
+
+# So that nextest ends a hung mutant first, and it reads as caught and not as a timeout. nextest
+# takes up to 190s on a hung test: the 180s in `.config/nextest.toml`, then 10s to kill it. Before
+# that the tests ahead of it can take up to the length of a baseline run, B. cargo-mutants waits for
+# the longer of this and 5B, and B + 190 fits in that for every B once this is at least 237.5.
+minimum_test_timeout = 240
