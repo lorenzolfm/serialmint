@@ -91,13 +91,35 @@
               doInstallCargoArtifacts = false;
             };
 
-          dev = import ./nix/dev { inherit pkgs toolchain; };
+          # The run of clippy, which `dev clippy` makes in the tree you are editing and the check below
+          # makes in the sandbox. `-D warnings`, as Cargo.toml has clippy's lints at `warn`, so that
+          # without it the run gates nothing.
+          clippyRun = args: "--all-targets --workspace ${args} -- -D warnings";
+
+          dev = import ./nix/dev { inherit pkgs toolchain clippyRun; };
         in
         {
           inherit dev serialmint;
 
           checks = {
             inherit serialmint;
+
+            # In the dev profile, as `dev clippy` runs, and on the dependencies the tests built. It
+            # reads clippy.toml, which no build does, so editing that rebuilds no package.
+            clippy = craneLib.cargoClippy (
+              devProfile
+              // {
+                src = sourceOf (
+                  cargoFiles
+                  ++ [
+                    ./tests
+                    ./clippy.toml
+                  ]
+                );
+                cargoClippyExtraArgs = clippyRun "";
+                doInstallCargoArtifacts = false;
+              }
+            );
 
             # crane limits the threads through RUST_TEST_THREADS, which nextest does not read.
             test = craneLib.cargoNextest (
