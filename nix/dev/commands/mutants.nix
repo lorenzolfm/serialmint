@@ -23,6 +23,9 @@ in
   ];
   text = ''
     # Not `cargo mutants`, for the same reason. cargo-mutants finds its cargo through CARGO.
-    CARGO=${cargo} cargo-mutants mutants "$@"
+    #
+    # `exec`, so that a signal to this script reaches cargo-mutants, which cleans up after itself.
+    # Without it, cargo-mutants goes on running with no parent.
+    CARGO=${cargo} exec cargo-mutants mutants "$@"
   '';
 }
