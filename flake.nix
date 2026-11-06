@@ -34,6 +34,17 @@
           # cannot name two rusts.
           toolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 
+          # The shell's rust, with what rust-analyzer reads, so that no gate has these in its closure.
+          # `override` replaces the file's list of components and doesn't add to it, so this reads it.
+          shellToolchain = toolchain.override {
+            extensions =
+              (builtins.fromTOML (builtins.readFile ./rust-toolchain.toml)).toolchain.components or [ ]
+              ++ [
+                "rust-analyzer"
+                "rust-src"
+              ];
+          };
+
           craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
 
           # A source of these files alone, so that editing any other file rebuilds nothing that reads
@@ -211,7 +222,7 @@
 
           shell = pkgs.mkShell {
             packages = [
-              toolchain
+              shellToolchain
               dev
             ];
           };
