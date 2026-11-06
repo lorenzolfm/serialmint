@@ -101,6 +101,17 @@
             ${toolchain}/bin/rustfmt "$@" || exit
           '';
 
+          nixFiles = sourceOf [ (pkgs.lib.fileset.fileFilter (file: file.hasExt "nix") ./.) ];
+
+          # On the nix files alone, so that editing any other file reruns neither linter.
+          nixLint =
+            tool: args:
+            pkgs.runCommand "serialmint-${tool.pname}" { } ''
+              cd ${nixFiles}
+              ${pkgs.lib.getExe tool} ${args}
+              touch "$out"
+            '';
+
           dev = import ./nix/dev {
             inherit
               pkgs
@@ -171,12 +182,17 @@
               pkgs.runCommand "serialmint-fmt-nix"
                 {
                   nativeBuildInputs = [ pkgs.nixfmt ];
-                  src = sourceOf [ (pkgs.lib.fileset.fileFilter (file: file.hasExt "nix") ./.) ];
+                  src = nixFiles;
                 }
                 ''
                   find "$src" -name '*.nix' -exec nixfmt --check {} +
                   touch "$out"
                 '';
+
+            statix = nixLint pkgs.statix "check .";
+
+            # --hidden, as it would skip a .nix in a hidden folder that `dev lint` reads.
+            deadnix = nixLint pkgs.deadnix "--hidden --fail .";
           };
 
           # `nix fmt`, which `dev` refuses to run outside this repository.
