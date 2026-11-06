@@ -73,15 +73,16 @@
             }
           );
 
-          # The tests run in the test profile, as `dev test` runs them, since the release profile
-          # turns off `debug_assert!`. So they need a build of the dependencies of their own.
+          # The tests run in the dev profile, which the test profile of `dev test` inherits, since
+          # the release profile turns off `debug_assert!`. So they need a build of the dependencies
+          # of their own.
           #
           # The gates keep no target. Nothing reads it, and a gate that fails has no output, so that
           # the JUnit of a failed run could not come from there.
-          testProfile =
+          devProfile =
             let
               args = common // {
-                CARGO_PROFILE = "test";
+                CARGO_PROFILE = "dev";
               };
             in
             args
@@ -100,7 +101,7 @@
 
             # crane limits the threads through RUST_TEST_THREADS, which nextest does not read.
             test = craneLib.cargoNextest (
-              testProfile
+              devProfile
               // {
                 src = sourceOf (
                   cargoFiles
@@ -117,7 +118,7 @@
             );
 
             # nextest runs no doctests.
-            doctest = craneLib.cargoDocTest testProfile;
+            doctest = craneLib.cargoDocTest devProfile;
           };
 
           shell = pkgs.mkShell {
