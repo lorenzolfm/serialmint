@@ -4,3 +4,42 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+
+# An overflow panics in production too. A wrapped amount is money from nothing.
+[profile.release]
+overflow-checks = true
+
+[lints.rust]
+unsafe_code = "forbid"
+# A nightly builds serialmint, for the newest of what is stable. `#![feature]` would tie the code to
+# one, where without it a stable rust can build it again.
+unstable_features = "deny"
+
+# `all` and `pedantic` at the bottom, then the lints worth warning on top of them, then the lints
+# that cost more than they catch. A later priority wins.
+#
+# `dev clippy` denies warnings, so every `warn` here is an error on a branch.
+[lints.clippy]
+all = { level = "warn", priority = 0 }
+pedantic = { level = "warn", priority = 1 }
+
+allow_attributes = { level = "warn", priority = 2 }
+allow_attributes_without_reason = { level = "warn", priority = 2 }
+as_conversions = { level = "warn", priority = 2 }
+implicit_clone = { level = "warn", priority = 2 }
+panic = { level = "warn", priority = 2 }
+redundant_test_prefix = { level = "warn", priority = 2 }
+redundant_type_annotations = { level = "warn", priority = 2 }
+str_to_string = { level = "warn", priority = 2 }
+todo = { level = "warn", priority = 2 }
+try_err = { level = "warn", priority = 2 }
+unimplemented = { level = "warn", priority = 2 }
+unwrap_used = { level = "warn", priority = 2 }
+
+inconsistent_digit_grouping = { level = "allow", priority = 3 }
+missing_errors_doc = { level = "allow", priority = 3 }
+missing_panics_doc = { level = "allow", priority = 3 }
+result_large_err = { level = "allow", priority = 3 }
+too_many_arguments = { level = "allow", priority = 3 }
+too_many_lines = { level = "allow", priority = 3 }
+unreadable_literal = { level = "allow", priority = 3 }
