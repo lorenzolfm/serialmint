@@ -189,6 +189,12 @@
                   touch "$out"
                 '';
 
+            # `--locked`, so that a stale lock fails and isn't checked as cargo would rewrite it.
+            deny = craneLib.cargoDeny {
+              src = sourceOf (cargoFiles ++ [ ./deny.toml ]);
+              cargoDenyExtraArgs = "--offline --locked";
+            };
+
             statix = nixLint pkgs.statix "check .";
 
             # --hidden, as it would skip a .nix in a hidden folder that `dev lint` reads.
