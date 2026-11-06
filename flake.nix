@@ -96,7 +96,19 @@
           # without it the run gates nothing.
           clippyRun = args: "--all-targets --workspace ${args} -- -D warnings";
 
-          dev = import ./nix/dev { inherit pkgs toolchain clippyRun; };
+          # `cargo fmt` exits 0 when rustfmt dies by a signal. A shell hands it the status as a number.
+          rustfmt = pkgs.writeShellScript "rustfmt" ''
+            ${toolchain}/bin/rustfmt "$@" || exit
+          '';
+
+          dev = import ./nix/dev {
+            inherit
+              pkgs
+              toolchain
+              clippyRun
+              rustfmt
+              ;
+          };
         in
         {
           inherit dev serialmint;
@@ -141,6 +153,38 @@
 
             # nextest runs no doctests.
             doctest = craneLib.cargoDocTest devProfile;
+
+            # Each reads only the files it checks, so that editing any other reruns neither.
+            fmtRust = craneLib.cargoFmt {
+              src = sourceOf [
+                ./src
+                ./tests
+                ./Cargo.toml
+                ./rustfmt.toml
+              ];
+              cargoExtraArgs = "--all";
+              RUSTFMT = rustfmt;
+              doInstallCargoArtifacts = false;
+            };
+
+            fmtNix =
+              pkgs.runCommand "serialmint-fmt-nix"
+                {
+                  nativeBuildInputs = [ pkgs.nixfmt ];
+                  src = sourceOf [ (pkgs.lib.fileset.fileFilter (file: file.hasExt "nix") ./.) ];
+                }
+                ''
+                  find "$src" -name '*.nix' -exec nixfmt --check {} +
+                  touch "$out"
+                '';
+          };
+
+          # `nix fmt`, which `dev` refuses to run outside this repository.
+          formatter = pkgs.writeShellApplication {
+            name = "serialmint-fmt";
+            text = ''
+              exec ${pkgs.lib.getExe dev} fmt "$@"
+            '';
           };
 
           shell = pkgs.mkShell {
@@ -162,5 +206,7 @@
       devShells = nixpkgs.lib.mapAttrs (_: built: { default = built.shell; }) bySystem;
 
       checks = nixpkgs.lib.mapAttrs (_: built: built.checks) bySystem;
+
+      formatter = nixpkgs.lib.mapAttrs (_: built: built.formatter) bySystem;
     };
 }
