@@ -42,3 +42,7 @@ A flake sees only the files git knows of, so `git add` a new file before you tru
 With a failing test left untracked, `dev test` fails and `nix flake check` passes. A new command in
 `nix/dev/commands/` appears in `dev` only after its `git add`, and under direnv after `direnv reload`
 too.
+
+## License
+
+[MIT](LICENSE).
