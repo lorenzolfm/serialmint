@@ -36,15 +36,75 @@
 
           craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
 
-          serialmint = craneLib.buildPackage {
-            src = craneLib.cleanCargoSource ./.;
+          # A source of these files alone, so that editing any other file rebuilds nothing that reads
+          # it.
+          sourceOf =
+            files:
+            pkgs.lib.fileset.toSource {
+              root = ./.;
+              fileset = pkgs.lib.fileset.unions files;
+            };
+
+          # What a build of the package reads. craneLib.cleanCargoSource would also keep every other
+          # .toml, so that editing one would rebuild the package.
+          cargoFiles = [
+            ./src
+            ./Cargo.toml
+            ./Cargo.lock
+          ];
+
+          # What the derivations share.
+          common = {
+            src = sourceOf cargoFiles;
             strictDeps = true;
+            cargoExtraArgs = "--locked";
           };
+
+          serialmint = craneLib.buildPackage (
+            common
+            // {
+              # The `test` and `doctest` gates run them. Building the package will not need Postgres
+              # and LND, once the tests do.
+              doCheck = false;
+            }
+          );
+
+          # The tests run in the dev profile, as `dev test` runs them, since the release profile turns
+          # off `debug_assert!`. So they need a build of the dependencies of their own.
+          devProfile =
+            let
+              args = common // {
+                CARGO_PROFILE = "dev";
+              };
+            in
+            args // { cargoArtifacts = craneLib.buildDepsOnly args; };
 
           dev = import ./nix/dev { inherit pkgs toolchain; };
         in
         {
           inherit dev serialmint;
+
+          checks = {
+            inherit serialmint;
+
+            # crane limits the threads through RUST_TEST_THREADS, which nextest does not read.
+            test = craneLib.cargoNextest (
+              devProfile
+              // {
+                src = sourceOf (
+                  cargoFiles
+                  ++ [
+                    ./tests
+                    ./.config/nextest.toml
+                  ]
+                );
+                cargoNextestExtraArgs = ''--profile ci --test-threads "$NIX_BUILD_CORES"'';
+              }
+            );
+
+            # nextest runs no doctests.
+            doctest = craneLib.cargoDocTest devProfile;
+          };
 
           shell = pkgs.mkShell {
             packages = [
@@ -63,5 +123,7 @@
       }) bySystem;
 
       devShells = nixpkgs.lib.mapAttrs (_: built: { default = built.shell; }) bySystem;
+
+      checks = nixpkgs.lib.mapAttrs (_: built: built.checks) bySystem;
     };
 }

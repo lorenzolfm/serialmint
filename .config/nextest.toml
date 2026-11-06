@@ -1,0 +1,11 @@
+[profile.default]
+fail-fast = false
+# A test that reaches this limit fails, so a hang is a failed test and does not stop the job.
+slow-timeout = { period = "60s", terminate-after = 3 }
+
+[profile.ci]
+retries = 0
+failure-output = "immediate-final"
+
+[profile.ci.junit]
+path = "junit.xml"
