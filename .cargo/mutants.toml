@@ -1,0 +1,6 @@
+# The same runner as `dev test`.
+test_tool = "nextest"
+
+# Above nextest's limit on one test in `.config/nextest.toml`, so that nextest ends a hung mutant
+# first, and it reads as caught.
+minimum_test_timeout = 200
