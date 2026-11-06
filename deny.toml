@@ -59,8 +59,6 @@ allow = [
     "Unlicense",
     "Zlib",
 ]
-# Our own crate has no license to check: it is private, and `publish = false` says so.
-private = { ignore = true }
 
 [sources]
 unknown-registry = "deny"
