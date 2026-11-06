@@ -1,6 +1,7 @@
 [profile.default]
 fail-fast = false
-# A test that reaches this limit fails, so a hang is a failed test and does not stop the job.
+# A test that reaches this limit fails, so a hang is a failed test and does not stop the job. The
+# doctests are not under it, as nextest does not run them.
 slow-timeout = { period = "60s", terminate-after = 3 }
 
 [profile.ci]

@@ -14,7 +14,9 @@
       dumb) export NEXTEST_SHOW_PROGRESS="''${NEXTEST_SHOW_PROGRESS:-counter}" ;;
     esac
 
-    cargo nextest run --locked "$@"
+    # Not `cargo nextest`: cargo looks in $CARGO_HOME/bin before PATH, so it could run another
+    # nextest. CARGO is what cargo would have set, for a test that reads it.
+    CARGO="$(command -v cargo)" cargo-nextest nextest run --locked "$@"
     cargo test --doc --locked
   '';
 }

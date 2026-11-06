@@ -46,11 +46,15 @@
             };
 
           # What a build of the package reads. craneLib.cleanCargoSource would also keep every other
-          # .toml, so that editing one would rebuild the package.
+          # .toml, so that editing one would rebuild the package. cargo finds build.rs and
+          # .cargo/config.toml by their names alone, so that leaving one out would change the build
+          # with no error.
           cargoFiles = [
             ./src
             ./Cargo.toml
             ./Cargo.lock
+            (pkgs.lib.fileset.maybeMissing ./build.rs)
+            (pkgs.lib.fileset.maybeMissing ./.cargo/config.toml)
           ];
 
           # What the derivations share.
@@ -69,15 +73,22 @@
             }
           );
 
-          # The tests run in the dev profile, as `dev test` runs them, since the release profile turns
-          # off `debug_assert!`. So they need a build of the dependencies of their own.
-          devProfile =
+          # The tests run in the test profile, as `dev test` runs them, since the release profile
+          # turns off `debug_assert!`. So they need a build of the dependencies of their own.
+          #
+          # The gates keep no target. Nothing reads it, and a gate that fails has no output, so that
+          # the JUnit of a failed run could not come from there.
+          testProfile =
             let
               args = common // {
-                CARGO_PROFILE = "dev";
+                CARGO_PROFILE = "test";
               };
             in
-            args // { cargoArtifacts = craneLib.buildDepsOnly args; };
+            args
+            // {
+              cargoArtifacts = craneLib.buildDepsOnly args;
+              doInstallCargoArtifacts = false;
+            };
 
           dev = import ./nix/dev { inherit pkgs toolchain; };
         in
@@ -89,13 +100,16 @@
 
             # crane limits the threads through RUST_TEST_THREADS, which nextest does not read.
             test = craneLib.cargoNextest (
-              devProfile
+              testProfile
               // {
                 src = sourceOf (
                   cargoFiles
                   ++ [
                     ./tests
                     ./.config/nextest.toml
+                    # A test run builds the examples, so that `dev test` fails on one that does not
+                    # compile.
+                    (pkgs.lib.fileset.maybeMissing ./examples)
                   ]
                 );
                 cargoNextestExtraArgs = ''--profile ci --test-threads "$NIX_BUILD_CORES"'';
@@ -103,7 +117,7 @@
             );
 
             # nextest runs no doctests.
-            doctest = craneLib.cargoDocTest devProfile;
+            doctest = craneLib.cargoDocTest testProfile;
           };
 
           shell = pkgs.mkShell {
