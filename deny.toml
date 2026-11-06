@@ -1,0 +1,71 @@
+# What cargo-deny gates on, as `dev deny` runs it. `bans`, `licenses` and `sources` need no network,
+# so they are a flake check. `advisories` needs the day's database, so it is not.
+
+[graph]
+all-features = true
+
+[advisories]
+yanked = "deny"
+# An entry here says why the advisory doesn't affect us.
+ignore = []
+
+[bans]
+wildcards = "deny"
+# It doesn't apply to a crate that can be published, so Cargo.toml has `publish = false`.
+allow-wildcard-paths = true
+# The mint implements the protocol itself. These are the crates of CDK. A new crate of CDK needs a
+# line here.
+deny = [
+    { crate = "cashu", reason = "no CDK in this project" },
+    { crate = "cdk", reason = "no CDK in this project" },
+    { crate = "cdk-axum", reason = "no CDK in this project" },
+    { crate = "cdk-bdk", reason = "no CDK in this project" },
+    { crate = "cdk-cli", reason = "no CDK in this project" },
+    { crate = "cdk-cln", reason = "no CDK in this project" },
+    { crate = "cdk-common", reason = "no CDK in this project" },
+    { crate = "cdk-fake-wallet", reason = "no CDK in this project" },
+    { crate = "cdk-ffi", reason = "no CDK in this project" },
+    { crate = "cdk-http-client", reason = "no CDK in this project" },
+    { crate = "cdk-integration-tests", reason = "no CDK in this project" },
+    { crate = "cdk-ldk-node", reason = "no CDK in this project" },
+    { crate = "cdk-lnd", reason = "no CDK in this project" },
+    { crate = "cdk-mintd", reason = "no CDK in this project" },
+    { crate = "cdk-mint-rpc", reason = "no CDK in this project" },
+    { crate = "cdk-nostr", reason = "no CDK in this project" },
+    { crate = "cdk-payment-processor", reason = "no CDK in this project" },
+    { crate = "cdk-postgres", reason = "no CDK in this project" },
+    { crate = "cdk-prometheus", reason = "no CDK in this project" },
+    { crate = "cdk-redb", reason = "no CDK in this project" },
+    { crate = "cdk-signatory", reason = "no CDK in this project" },
+    { crate = "cdk-sql-common", reason = "no CDK in this project" },
+    { crate = "cdk-sqlite", reason = "no CDK in this project" },
+    { crate = "cdk-supabase", reason = "no CDK in this project" },
+]
+
+[licenses]
+# What the mint can ship with: permissive licenses, and no copyleft. A crate under any other license
+# fails here until someone reads it. Allowed before any crate uses one, so that isn't a warning.
+unused-allowed-license = "allow"
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "CC0-1.0",
+    "ISC",
+    "MIT",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+# Our own crate has no license to check: it is private, and `publish = false` says so.
+private = { ignore = true }
+
+[sources]
+unknown-registry = "deny"
+# A git dependency needs a line in `allow-git`, so each one gets a review. A `rev`, so that the pin is
+# in Cargo.toml and not only in Cargo.lock.
+unknown-git = "deny"
+required-git-spec = "rev"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
