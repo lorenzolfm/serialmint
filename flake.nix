@@ -97,13 +97,35 @@
           # that `args` cannot narrow the targets.
           clippyRun = args: "--all-targets --workspace ${args} -- -D warnings";
 
-          dev = import ./nix/dev { inherit pkgs toolchain clippyRun; };
+          # `cargo fmt` exits 0 when rustfmt dies by a signal. A shell hands it the status as a number.
+          rustfmt = pkgs.writeShellScript "rustfmt" ''
+            ${toolchain}/bin/rustfmt "$@" || exit
+          '';
+
+          dev = import ./nix/dev {
+            inherit
+              pkgs
+              toolchain
+              clippyRun
+              rustfmt
+              ;
+          };
+
+          # `nix fmt`, which `dev` refuses to run outside this repository.
+          formatter = pkgs.writeShellApplication {
+            name = "serialmint-fmt";
+            text = ''
+              exec ${pkgs.lib.getExe dev} fmt "$@"
+            '';
+          };
         in
         {
-          inherit dev serialmint;
+          inherit dev formatter serialmint;
 
           checks = {
-            inherit serialmint;
+            # `nix flake check` builds only what is here, and shellcheck reads a command when it
+            # builds. So without these, a command that does not parse would pass.
+            inherit dev formatter serialmint;
 
             # In the dev profile, as `dev clippy` runs, and on the dependencies the tests built. It
             # reads clippy.toml, which no build does, so editing that rebuilds no package.
@@ -145,6 +167,36 @@
 
             # nextest runs no doctests.
             doctest = craneLib.cargoDocTest devProfile;
+
+            # Each reads only the files it checks, so that editing any other reruns neither.
+            fmtRust = craneLib.cargoFmt {
+              src = sourceOf [
+                ./src
+                ./tests
+                ./Cargo.toml
+                ./rustfmt.toml
+                # `cargo fmt` reaches these too. cargo finds them by their names alone, so that
+                # leaving one out would pass what `dev fmt --check` fails, with no error.
+                (pkgs.lib.fileset.maybeMissing ./build.rs)
+                (pkgs.lib.fileset.maybeMissing ./examples)
+                (pkgs.lib.fileset.maybeMissing ./benches)
+                # rustfmt reads this one before rustfmt.toml.
+                (pkgs.lib.fileset.maybeMissing ./.rustfmt.toml)
+              ];
+              RUSTFMT = rustfmt;
+              doInstallCargoArtifacts = false;
+            };
+
+            fmtNix =
+              pkgs.runCommand "serialmint-fmt-nix"
+                {
+                  nativeBuildInputs = [ pkgs.nixfmt ];
+                  src = sourceOf [ (pkgs.lib.fileset.fileFilter (file: file.hasExt "nix") ./.) ];
+                }
+                ''
+                  find "$src" -name '*.nix' -exec nixfmt --check {} +
+                  touch "$out"
+                '';
           };
 
           shell = pkgs.mkShell {
@@ -166,5 +218,7 @@
       devShells = nixpkgs.lib.mapAttrs (_: built: { default = built.shell; }) bySystem;
 
       checks = nixpkgs.lib.mapAttrs (_: built: built.checks) bySystem;
+
+      formatter = nixpkgs.lib.mapAttrs (_: built: built.formatter) bySystem;
     };
 }
