@@ -1,4 +1,4 @@
-{ pkgs, toolchain }:
+{ pkgs, toolchain, ... }:
 {
   name = "check";
   usage = "[args...]";
