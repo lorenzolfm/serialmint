@@ -19,7 +19,6 @@
       systems = [
         "x86_64-linux"
         "aarch64-linux"
-        "aarch64-darwin"
       ];
 
       # Everything the flake makes, for one system.
