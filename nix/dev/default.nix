@@ -1,9 +1,9 @@
-{ pkgs, toolchain }:
+args@{ pkgs, ... }:
 let
   inherit (pkgs) lib;
 
   # One file for each command in ./commands, so that adding a command touches nothing here.
-  records = map (file: import (./commands + "/${file}") { inherit pkgs toolchain; }) (
+  records = map (file: import (./commands + "/${file}") args) (
     builtins.attrNames (builtins.readDir ./commands)
   );
 
