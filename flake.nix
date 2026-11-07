@@ -174,6 +174,8 @@
                 ./src
                 ./tests
                 ./Cargo.toml
+                # Empty, for the defaults. Without it, rustfmt would read one from above the
+                # checkout or from the home directory, so that `dev fmt` could differ from the gate.
                 ./rustfmt.toml
                 # `cargo fmt` reaches these too. cargo finds them by their names alone, so that
                 # leaving one out would pass what `dev fmt --check` fails, with no error.
