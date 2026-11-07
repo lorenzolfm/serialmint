@@ -19,12 +19,17 @@ let
       }
     );
 
+  signature = record: "dev ${record.name} ${record.usage}";
+  width = lib.foldl' lib.max 0 (map (record: lib.stringLength (signature record)) records);
+
   helpLines = lib.concatMapStringsSep "\n" (
-    record: "echo ${lib.escapeShellArg "  dev ${record.name} ${record.usage}  ${record.help}"}"
+    record:
+    "printf '  %-${toString width}s  %s\\n' ${lib.escapeShellArg (signature record)} ${lib.escapeShellArg record.help}"
   ) records;
 
   dispatch = lib.concatMapStringsSep "\n" (record: ''
     ${record.name})
+      enter_checkout
       exec ${program record} "$@"
       ;;
   '') records;
@@ -37,6 +42,17 @@ pkgs.writeShellApplication {
       echo 'dev: serialmint build recipes (pinned nix tooling)'
       echo
       ${helpLines}
+    }
+
+    # A command can write tracked files, so it runs only in this repository, from its root. The root's
+    # Cargo.toml says which repository it is, and no git at all fails the same way.
+    enter_checkout() {
+      root="$(${lib.getExe pkgs.git} rev-parse --show-toplevel)" || root=""
+      if ! ${lib.getExe pkgs.gnugrep} --quiet --line-regexp 'name = "serialmint"' "$root/Cargo.toml" 2>/dev/null; then
+        echo 'dev: run this inside the serialmint checkout, whose root Cargo.toml has the exact line: name = "serialmint"' >&2
+        exit 2
+      fi
+      cd "$root"
     }
 
     cmd="''${1:-help}"
