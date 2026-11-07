@@ -1,7 +1,8 @@
 [profile.default]
 fail-fast = false
 # A test that reaches this limit fails, so a hang is a failed test and does not stop the job. The
-# doctests are not under it, as nextest does not run them.
+# doctests are not under it, as nextest does not run them. Raising it means raising
+# `minimum_test_timeout` in `.cargo/mutants.toml`, which is worked out from it.
 slow-timeout = { period = "60s", terminate-after = 3 }
 
 [profile.ci]
